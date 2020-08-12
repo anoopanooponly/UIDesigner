@@ -1,0 +1,562 @@
+import styled from 'styled-components';
+import React, { Component, useState } from 'react';
+import { DragDropContext, Droppable, Draggable } from "react-beautiful-dnd";
+import { v4 as uuid } from 'uuid';
+import NewDiv from './NewDiv'
+
+const RightDiv = styled.div`
+width: calc(100% - 88px);
+transition: width ease 0.1s;
+border-left: 1px solid #e1e1e1;
+    min-height: 100%;
+    overflow-y: scroll;
+    height: 100%;
+    position: relative;
+    background-color: #f7f7f7;
+    float: left;
+     overflow: visible;
+    flex-direction: column;
+`
+
+// a little function to help us with reordering the result
+const reorder = (list:any, startIndex:any, endIndex:any) => {
+    const result: any = Array.from(list);
+    const [removed] = result.splice(startIndex, 1);
+    result.splice(endIndex, 0, removed);
+
+    return result;
+};
+/**
+ * Moves an item from one list to another list.
+ */
+const copy = (source:any, destination:any, droppableSource:any, droppableDestination:any) => {
+    console.log('==> dest', destination);
+
+    const sourceClone = Array.from(source);
+    const destClone: any = Array.from(destination);
+    const item:any = sourceClone[droppableSource.index];
+
+    destClone.splice(droppableDestination.index, 0, { ...item, id: uuid() });
+    return destClone;
+};
+
+const move = (source:any, destination:any, droppableSource:any, droppableDestination:any) => {
+    const sourceClone = Array.from(source);
+    const destClone = Array.from(destination);
+    const [removed] = sourceClone.splice(droppableSource.index, 1);
+
+    destClone.splice(droppableDestination.index, 0, removed);
+
+    const result:any = {};
+    result[droppableSource.droppableId] = sourceClone;
+    result[droppableDestination.droppableId] = destClone;
+
+    return result;
+};
+
+const Content = styled.div`
+    margin-right: 200px;
+`;
+
+const Item = styled.div`
+    display: flex;
+    user-select: none;
+    padding: 0.5rem;
+    margin: 0 0 0.5rem 0;
+    align-items: flex-start;
+    align-content: flex-start;
+    line-height: 1.5;
+    border-radius: 3px;
+    background: #fff;
+    border: 1px ${(props:any) => (props.isDragging ? 'dashed #4099ff' : 'solid #ddd')};
+`;
+
+const Clone = styled(Item)`
+    + div {
+        display: none !important;
+    }
+`;
+
+const Handle = styled.div`
+    display: flex;
+    align-items: center;
+    align-content: center;
+    user-select: none;
+    margin: -0.5rem 0.5rem -0.5rem -0.5rem;
+    padding: 0.5rem;
+    line-height: 1.5;
+    border-radius: 3px 0 0 3px;
+    background: #fff;
+    border-right: 1px solid #ddd;
+    color: #000;
+`;
+
+const List = styled.div`
+    border: 1px
+        ${(props: any) => (props.isDraggingOver ? 'dashed #000' : 'solid #ddd')};
+    background: #fff;
+    padding: 0.5rem 0.5rem 0;
+    border-radius: 3px;
+    flex: 0 0 150px;
+    font-family: sans-serif;
+`;
+
+const Kiosk = styled(List)`
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 200px;
+`;
+
+const Container = styled(List)`
+    margin: 0.5rem 0.5rem 1.5rem;
+    background: #ccc;
+    background: lightgrey;width: 75vw;
+`;
+
+const Notice = styled.div`
+    display: flex;
+    align-items: center;
+    align-content: center;
+    justify-content: center;
+    padding: 0.5rem;
+    margin: 0 0.5rem 0.5rem;
+    border: 1px solid transparent;
+    line-height: 1.5;
+    color: #aaa;
+`;
+
+const Button = styled.button`
+    display: flex;
+    align-items: center;
+    align-content: center;
+    justify-content: center;
+    margin: 0.5rem;
+    padding: 0.5rem;
+    color: #000;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 3px;
+    font-size: 1rem;
+    cursor: pointer;
+`;
+
+const ButtonText = styled.div`
+    margin: 0 1rem;
+`;
+
+const Row = styled.div`
+   display:flex;
+   flex-direction:row;
+   flex-wrap: wrap;
+   justify-content:start;
+   background-color:yellow;
+   border:1px dotted green;
+`;
+
+declare global {
+    interface Window { mystate: any; }
+}
+
+const ITEMS = [
+    {
+        id: uuid(),
+        content: 'Headline'
+    },
+    {
+        id: uuid(),
+        content: 'Copy'
+    },
+    {
+        id: uuid(),
+        content: 'Image'
+    },
+    {
+        id: uuid(),
+        content: 'Slideshow'
+    },
+    {
+        id: uuid(),
+        content: 'Quote'
+    }
+];
+
+const grid:any = 8;
+  const RightPanel = () => {
+      const [state, setState] = useState({
+          [uuid()]: [{
+              columns: [{
+                  id: uuid(), w: 20, items: [{
+                      id: uuid(),
+                      content: 'Headline'
+                  }, {
+                    id: uuid(),
+                    content: 'hello'
+                }]
+              },
+              {
+                id: uuid(), w: 75, items: [{
+                    id: uuid(),
+                    content: 'newz'
+                }]
+            }]
+          }],  [uuid()]: [{
+            columns: [{
+                id: uuid(), w: 100, items: [{
+                    id: uuid(),
+                    content: 'Headline1'
+                }]
+            },
+            {
+              id: uuid(), w: 200, items: [{
+                  id: uuid(),
+                  content: 'newz1'
+              }]
+          }]
+        }]
+    
+      });
+  
+     
+    window.mystate =state;
+
+    const onDragEnd1 = (result:any) => {
+        const { source, destination } = result;
+
+        console.log('==> result', result);
+
+    }
+
+    const onDragEnd = (result:any) => {
+        const { source, destination } = result;
+
+        console.log('==> result', result);
+
+        // dropped outside the list
+        if (!destination) {
+            return;
+        }
+
+        switch (source.droppableId) {
+            case destination.droppableId:
+                setState({
+                    [destination.droppableId]: reorder(
+                        state[source.droppableId],
+                        source.index,
+                        destination.index
+                    )
+                });
+                break;
+            case 'ITEMS':
+                setState({
+                    [destination.droppableId]: copy(
+                        ITEMS,
+                        state[destination.droppableId],
+                        source,
+                        destination
+                    )
+                });
+                break;
+            default:
+                setState(
+                    move(
+                        state[source.droppableId],
+                        state[destination.droppableId],
+                        source,
+                        destination
+                    )
+                );
+                break;
+        }
+    };
+
+    const addList = (e: any) => {
+          setState({ [uuid()]: [] });
+    };
+
+    const getListStyle = (isDraggingOver: any) => ({
+        background: isDraggingOver ? 'lightblue' : 'lightgrey',
+        // width: 250
+      });
+
+      const getListStyle1 = () => ({
+        display:'flex' ,
+        width: 250,
+        
+      });
+    
+     
+      const getItemStyle = (isDragging:any, draggableStyle:any) => ({
+        // some basic styles to make the items look a bit nicer
+        userSelect: "none",
+        padding: grid * 2,
+        margin: `0 10px ${grid}px 0`,
+      
+        // change background colour if dragging
+        background: isDragging ? "lightgreen" : "grey",
+        display: "flex",
+        flexFlow: "row",
+        // styles we need to apply on draggables
+        ...draggableStyle
+      });
+
+
+      const getItemStyle2 = (isDragging:any, draggableStyle:any) => ({
+        // some basic styles to make the items look a bit nicer
+        userSelect: "none",
+        padding: grid * 2,
+        margin: `0 10px ${grid}px 0`,
+      
+        display: "inline-flex",
+        width: "120px",
+        
+      
+        // change background colour if dragging
+        background: isDragging ? "lightgreen" : "grey",
+       
+       
+       
+        border: "1px solid grey",
+        // styles we need to apply on draggables
+        ...draggableStyle
+      });
+      
+      const getListStyle2 = (isDraggingOver:any, column: any) => ({
+        background: isDraggingOver ? "lightblue" : "lightgrey",
+        padding: grid,
+        margin: "10px 0",
+        marginLeft: "2px",
+        width:`${column.w}%`,
+        border: "1px dotted green"
+      });
+
+
+    return (
+    <RightDiv>
+       <DragDropContext onDragEnd={onDragEnd1}>
+                <Droppable droppableId="ITEMS" isDropDisabled={true} type="items">
+                    {(provided:any, snapshot: any) => (
+                        <Kiosk
+                        ref={provided.innerRef}
+                        style={getListStyle(snapshot.isDraggingOver)}>
+                            {ITEMS.map((item: any, index: any) => (
+                                <Draggable 
+                                    key={item.id}
+                                    draggableId={item.id}
+                                    index={index}>
+                                    {(provided:any, snapshot: any) => (
+                                        <React.Fragment>
+                                            <Item
+                                                ref={provided.innerRef}
+                                                {...provided.draggableProps}
+                                                {...provided.dragHandleProps}
+                                                isDragging={snapshot.isDragging}
+                                                style={
+                                                    provided.draggableProps
+                                                        .style
+                                                }>
+                                                {item.content}
+                                            </Item>
+                                            {snapshot.isDragging && (
+                                                <Clone>{item.content}</Clone>
+                                            )}
+                                        </React.Fragment>
+                                    )}
+                                </Draggable>
+                            ))}
+                        </Kiosk>
+                    )}
+                </Droppable>
+                <Content>
+                    <Button onClick={addList}>
+                        <svg width="24" height="24" viewBox="0 0 24 24">
+                            <path
+                                fill="currentColor"
+                                d="M19,13H13V19H11V13H5V11H11V5H13V11H19V13Z"
+                            />
+                        </svg>
+                        <ButtonText>Add List</ButtonText>
+                    </Button>
+          
+                    <Droppable droppableId="droppable" type="App">
+          {(provided, snapshot) => (
+            <div
+              ref={provided.innerRef}
+              style={getListStyle(snapshot.isDraggingOver)}
+            >
+              {Object.keys(state).map((list:any, index: any) => (
+                <Draggable key={list} draggableId={list} index={index}>
+                  {(provided:any, snapshot:any) => (
+                    <div >
+                      <div
+                        ref={provided.innerRef}
+                        {...provided.draggableProps}
+                        style={getItemStyle(
+                          snapshot.isDragging,
+                          provided.draggableProps.style
+                        )}
+                      >
+                        
+                        <span
+                          {...provided.dragHandleProps}
+                          style={{
+                            display: "inline-block",
+                            margin: "0 10px",
+                            border: "1px solid #000"
+                          }}
+                        >
+                          Drag
+                        </span>
+                          
+
+                        {state[list].length
+                                            ? state[list].map(
+                                                  (listItems:any, index:any) => (
+                                                    listItems.columns && listItems.columns.length && listItems.columns.map( (column:any, index:any) => (
+
+
+                                                        <Droppable
+                                                        droppableId={column.id}
+                                                        direction="horizontal"
+                                                        type="items"
+                                                      >
+                                                        {(provided, snapshot) => (
+                                                          <NewDiv column={column} provided={provided}  snapshot={snapshot}
+                                                           
+                                                            
+                                                          >
+                                                            
+                                                          </NewDiv>
+                                                        )}
+                                                      </Droppable>
+
+                                                    ))
+                                                      
+                                                     
+                                                  )
+                                              ) :  (
+                                                <Notice>
+                                                    Drop items here1
+                                                </Notice>
+                                            )
+                                              }
+
+
+
+
+                          
+                       
+                      </div>
+                      
+                    </div>
+                  )}
+                </Draggable>
+              ))}
+              
+            </div>
+          )}
+        </Droppable>
+
+
+
+
+
+
+                    
+                    {/* {Object.keys(state).map((list:any, i:any) => {
+                        console.log('==> list', list);
+                        
+                                                  
+                        return (
+                          
+
+                           
+                            // <Row key={list}>
+                                
+                            //     {state[list].length
+                            //                 ? state[list].map(
+                            //                       (listItems:any, index:any) => (
+                            //                         listItems.columns && listItems.columns.length && listItems.columns.map( (column:any, index:any) => (
+
+
+                            //                         <Droppable key={column.id} droppableId={column.id}>
+                            //                         {(provided:any, snapshot: any) => (
+                            //                             <Container
+                            //                             ref={provided.innerRef}
+                            //                             style={getListStyle(snapshot.isDraggingOver)}
+                            //                             >
+                            //                                 {column.items && column.items.length
+                            //                                     ? column.items.map(
+                            //                                           (item:any, index:any) => (
+                            //                                               <Draggable
+                            //                                                   key={item.id}
+                            //                                                   draggableId={item.id}
+                            //                                                   index={index}>
+                            //                                                   {(
+                            //                                                       provided:any,
+                            //                                                       snapshot:any
+                            //                                                   ) => (
+                            //                                                       <Item
+                            //                                                           ref={
+                            //                                                               provided.innerRef
+                            //                                                           }
+                            //                                                           {...provided.draggableProps}
+                            //                                                           isDragging={
+                            //                                                               snapshot.isDragging
+                            //                                                           }
+                            //                                                           style={
+                            //                                                               provided
+                            //                                                                   .draggableProps
+                            //                                                                   .style
+                            //                                                           }>
+                            //                                                           <Handle
+                            //                                                               {...provided.dragHandleProps}>
+                            //                                                               <svg
+                            //                                                                   width="24"
+                            //                                                                   height="24"
+                            //                                                                   viewBox="0 0 24 24">
+                            //                                                                   <path
+                            //                                                                       fill="currentColor"
+                            //                                                                       d="M3,15H21V13H3V15M3,19H21V17H3V19M3,11H21V9H3V11M3,5V7H21V5H3Z"
+                            //                                                                   />
+                            //                                                               </svg>
+                            //                                                           </Handle>
+                            //                                                           {item.content}
+                            //                                                       </Item>
+                            //                                                   )}
+                            //                                               </Draggable>
+                            //                                           )
+                            //                                       )
+                            //                                     : !provided.placeholder && (
+                            //                                           <Notice>
+                            //                                               Drop items here
+                            //                                           </Notice>
+                            //                                       )}
+                            //                                 {provided.placeholder}
+                            //                             </Container>
+                            //                         )}
+                            //                     </Droppable>  
+                            //                         ))
+                                                      
+                                                     
+                            //                       )
+                            //                   ) :  (
+                            //                     <Notice>
+                            //                         Drop items here1
+                            //                     </Notice>
+                            //                 )
+                            //                   }
+                     
+                            // </Row>
+                            
+                        );
+                    })} */}
+                </Content>
+            </DragDropContext>
+    </RightDiv>
+    
+   );
+  }
+  
+  export default RightPanel;

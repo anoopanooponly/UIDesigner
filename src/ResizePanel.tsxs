@@ -1,0 +1,86 @@
+import styled from 'styled-components';
+import React,  { useState, useEffect ,useRef, MutableRefObject } from 'react';
+import ReactDOM from 'react-dom';
+import './Panel.css';
+
+const ResizePanel = (props: any) => {
+    const myRef: any = useRef();
+    const [state, setState]:any = useState( {
+        isDragging: false,
+        panels: [20, 40, 30, 30]
+      });
+
+
+      useEffect(() => {
+        myRef.current.addEventListener('mousemove', resizePanel)
+        myRef.current.addEventListener('mouseup', stopResize)
+        myRef.current.addEventListener('mouseleave', stopResize)
+      }, [])
+
+      const startResize = (event, index) => {
+        var clientx = event.clientX;
+        state.panels[index] = state.panels[index]+2;
+        console.log("start startResize" + state.panels[index] );
+        setState(({panels, currentPanel, delta}: any) => ({
+          isDragging: true,
+          currentPanel: index,
+          initialPos: clientx,
+          panels: {
+            ...panels
+          }
+        }))
+      }
+      
+      const stopResize = () => {
+        if (state.isDragging) {
+          console.log(state.panels)
+          setState(({panels, currentPanel, delta}: any) => ({
+            isDragging: false,
+            panels: {
+              ...panels,
+            //   [currentPanel]: (panels[currentPanel] || 0) - delta,
+            //   [currentPanel - 1]: (panels[currentPanel - 1] || 0) + delta
+            },
+            delta: 0,
+            currentPanel: null
+          }))
+        }
+      }
+      
+      const resizePanel = (event) => {
+       
+        if (state.isDragging) {
+            console.log("resizePanel::", state.isDragging);
+          const delta: any = event.clientX - state.initialPos
+          setState({
+            delta: delta
+          })
+        }
+      }
+
+      const rest =props.children.slice(1);
+
+    return (
+      
+        
+          <div ref={myRef} className="panel-container" onMouseUp={() => stopResize()}>
+            <div className="panel" style={{width: `calc(100 - ${state.panels[1]} - ${state.panels[2]})%`}}>
+              {props.children[0]}
+            </div>
+            {[].concat(...rest.map((child, i) => {
+              return [
+                <div onMouseDown={(e) => startResize(e, i + 1)}
+                  key={"resizer_" + i}
+                  style={state.currentPanel === i+1 ? {left: state.delta} : {}}
+                  className="resizer"></div>,
+                <div key={"panel_" + i} className="panel" style={{width: `${state.panels[i + 1]}%`}}>
+                  {child}k
+                </div>
+              ]
+            }))}
+          </div>
+    
+   );
+  }
+  
+  export default ResizePanel;
